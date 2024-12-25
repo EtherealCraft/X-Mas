@@ -1,5 +1,7 @@
 package ru.meloncode.xmas;
 
+import com.destroystokyo.paper.profile.PlayerProfile;
+import com.destroystokyo.paper.profile.ProfileProperty;
 import org.bukkit.*;
 import org.bukkit.FireworkEffect.Type;
 import org.bukkit.block.*;
@@ -11,10 +13,12 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.util.Vector;
+import ru.meloncode.xmas.utils.LocationUtils;
 
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class MagicTree {
     private static final ConcurrentHashMap<Block, UUID> blockAssociation = new ConcurrentHashMap<>();
@@ -84,18 +88,17 @@ public class MagicTree {
         return levelupRequirements;
     }
 
-    public boolean grow(Material material) {
+    public boolean grow(Material material, Player player) {
         if (levelupRequirements.containsKey(material)) {
             if (levelupRequirements.get(material) <= 1) {
                 levelupRequirements.remove(material);
             } else {
                 levelupRequirements.put(material, levelupRequirements.get(material) - 1);
             }
+            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 2f, 1.5f);
             for (Block block : blocks) {
                 if (block.getType() == Material.SPRUCE_LEAVES || block.getType() == Material.SPRUCE_SAPLING) {
                     Effects.GROW.playEffect(block.getLocation());
-                    for (int i = 0; i <= 3; i++)
-                        location.getWorld().playSound(location, Sound.ENTITY_PLAYER_LEVELUP, 1, Main.RANDOM.nextFloat() + 0.2f);
                 }
             }
             save();
@@ -118,7 +121,7 @@ public class MagicTree {
 
     public void playParticles()
     {
-        if (blocks != null && blocks.size() > 0) {
+        if (blocks != null && !blocks.isEmpty()) {
             for (Block block : blocks) {
                 if(!block.getWorld().isChunkLoaded(block.getX() / 16, block.getZ() / 16))
                     continue;
@@ -192,37 +195,62 @@ public class MagicTree {
 
     @SuppressWarnings("deprecation")
     public void spawnPresent() {
-        if(!location.getWorld().isChunkLoaded((int)location.getX() / 16, (int)location.getZ() / 16))
+        if(!location.getChunk().isLoaded())
         {
-            if(scheduledPresents + 1 <= 8)
+            if(scheduledPresents + 1 <= 8) {
                 scheduledPresents++;
+                if (XMas.getAllTreesInChunk(location.getChunk()) == null) {
+                    return;
+                }
+                XMas.updateMagicTree(this, location.getChunk().getChunkKey());
+            }
             return;
         }
 
-        Location presentLoc = location.clone().add(-1 + Main.RANDOM.nextInt(3), 0, -1 + Main.RANDOM.nextInt(3));
+        Block pBlock = findPresentLocation();
+        if (pBlock == null) return;
 
-        Block pBlock = presentLoc.getBlock();
-        if (!pBlock.getType().isSolid() && pBlock.getType() != Material.SPRUCE_SAPLING)
-        {
-            pBlock.setType(Material.PLAYER_HEAD);
-            BlockState state = pBlock.getState();
-            if (state instanceof Skull) {
-                Skull skull = (Skull) state;
-                BlockFace face;
-                do {
-                    face = BlockFace.values()[Main.RANDOM.nextInt(BlockFace.values().length)];
+        pBlock.setType(Material.PLAYER_HEAD);
+        BlockState state = pBlock.getState();
+        if (state instanceof Skull) {
+            Skull skull = (Skull) state;
+            BlockFace face;
+            do {
+                face = BlockFace.values()[Main.RANDOM.nextInt(BlockFace.values().length)];
+            }
+            while (face == BlockFace.DOWN || face == BlockFace.UP || face == BlockFace.SELF);
+            //skull.setRotation(face);
+            Rotatable skullRotatable = (Rotatable) skull.getBlockData();
+            skullRotatable.setRotation(face);
+
+            skull.setType(Material.PLAYER_HEAD);
+
+            PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID());
+            String selectedTexture = Main.getHeads().get(Main.RANDOM.nextInt(Main.getHeads().size()));
+            profile.setProperty(new ProfileProperty("textures", selectedTexture));
+
+            skull.setOwnerProfile(profile);
+            skull.update(true);
+        }
+    }
+
+    private Block findPresentLocation() {
+        List<Block> locations = new ArrayList<>();
+        for (int x = -1; x <= 1; x++) {
+            for (int z = -1; z <= 1; z++) {
+                if (x == 0 && z == 0) continue;
+                Block possibleLoc = location.getBlock().getRelative(x, 0, z);
+
+                // we'll still make sure that there isn't a spruce spaling
+                if (!possibleLoc.getType().isSolid() && possibleLoc.getType() != Material.SPRUCE_SAPLING) {
+                    locations.add(possibleLoc);
                 }
-                while (face == BlockFace.DOWN || face == BlockFace.UP || face == BlockFace.SELF);
-                //skull.setRotation(face);
-                Rotatable skullRotatable = (Rotatable) skull.getBlockData();
-                skullRotatable.setRotation(face);
-                //skull.setSkullType(SkullType.PLAYER);
-                skull.setType(Material.PLAYER_HEAD);
-                //skull.setOwner();
-                skull.setOwningPlayer(Bukkit.getOfflinePlayer(Main.getHeads().get(Main.RANDOM.nextInt(Main.getHeads().size()))));
-                skull.update(true);
             }
         }
+        if (locations.isEmpty()) {
+            return null;
+        }
+        return locations.get(ThreadLocalRandom.current().nextInt(locations.size()));
     }
 
     public boolean canLevelUp() {

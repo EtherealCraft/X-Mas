@@ -20,12 +20,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.jetbrains.annotations.Nullable;
+import ru.meloncode.xmas.utils.LocationUtils;
 import ru.meloncode.xmas.utils.TextUtils;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 class Events implements Listener {
     private final Map<UUID, Long> destroyers = new HashMap<>();
@@ -49,7 +47,7 @@ class Events implements Listener {
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
     public void onPlayerOpenPresent(BlockBreakEvent event) {
         Block block = event.getBlock();
-        if (block != null && block.getType() == Material.PLAYER_HEAD) {
+        if (block.getType() == Material.PLAYER_HEAD) {
             XMas.processPresent(block, event.getPlayer());
         }
     }
@@ -82,7 +80,7 @@ class Events implements Listener {
                         } else {
                             if (event.getItem() != null) {
                                 ItemStack is = event.getItem();
-                                if (tree.grow(is.getType())) {
+                                if (tree.grow(is.getType(), player)) {
                                     TextUtils.sendMessage(player, LocaleManager.GROW_LVL_PROGRESS);
                                     if (player.getGameMode() != GameMode.CREATIVE) {
                                         if (is.getAmount() > 1) {
@@ -99,7 +97,7 @@ class Events implements Listener {
                                     TextUtils.sendMessage(player, line);
                                 }
 
-                                if (tree.getLevelupRequirements().size() == 0) {
+                                if (tree.getLevelupRequirements().isEmpty()) {
                                     TextUtils.sendMessage(player, LocaleManager.GROW_LVL_READY);
                                 }
                             }
@@ -124,6 +122,10 @@ class Events implements Listener {
                                 if (is.getType() == XMas.XMAS_CRYSTAL.getType() && is.hasItemMeta() && is.getItemMeta().hasLore()) {
                                     ItemMeta im = is.getItemMeta();
                                     if (im.getLore().equals(XMas.XMAS_CRYSTAL.getItemMeta().getLore())) {
+                                        if (!block.getWorld().getName().equals("world")) {
+                                            event.getPlayer().sendMessage(ChatColor.RED + "The tree's magic won't work outside the overworld!");
+                                            return;
+                                        }
                                         if (player.getGameMode() != GameMode.CREATIVE) {
                                             if (is.getAmount() > 1) {
                                                 is.setAmount(is.getAmount() - 1);
@@ -297,16 +299,19 @@ class Events implements Listener {
         }
     }
 
-    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    @EventHandler(priority = EventPriority.MONITOR)
     private void chunkLoad(ChunkLoadEvent e)
     {
         Collection<MagicTree> trees = XMas.getAllTreesInChunk(e.getChunk());
-        if(trees == null)
+        if(trees == null) {
             return;
+        }
+
         for(MagicTree tree : trees)
         {
-            if(tree.hasScheduledPresents())
+            if(tree.hasScheduledPresents()) {
                 tree.spawnScheduledPresents();
+            }
         }
     }
 }

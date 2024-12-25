@@ -1,11 +1,10 @@
 package ru.meloncode.xmas.utils;
 
-import org.apache.commons.lang.NullArgumentException;
-import org.apache.commons.lang.WordUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 import ru.meloncode.xmas.LocaleManager;
 import ru.meloncode.xmas.MagicTree;
 
@@ -14,19 +13,17 @@ import java.util.List;
 
 public class TextUtils {
 
-    public static List<String> generateChatReqList(MagicTree tree) {
-        if (tree == null)
-            throw new NullArgumentException("tree");
+    public static List<String> generateChatReqList(@NotNull MagicTree tree) {
         List<String> list = new ArrayList<>();
         list.add(ChatColor.GOLD + LocaleManager.GROW_REQ_LIST_TITLE + ":");
-        if (tree.getLevel().getLevelupRequirements() != null && tree.getLevel().getLevelupRequirements().size() > 0)
+        if (tree.getLevel().getLevelupRequirements() != null && !tree.getLevel().getLevelupRequirements().isEmpty())
             for (Material cMaterial : tree.getLevel().getLevelupRequirements().keySet()) {
                 int levelReq = tree.getLevel().getLevelupRequirements().get(cMaterial);
                 int treeReq = 0;
                 if (tree.getLevelupRequirements().containsKey(cMaterial))
                     treeReq = tree.getLevelupRequirements().get(cMaterial);
 
-                list.add(ChatColor.BOLD + "" + (treeReq == 0 ? ChatColor.GREEN + "" + ChatColor.STRIKETHROUGH : ChatColor.RED) + WordUtils.capitalizeFully(String.valueOf(cMaterial).replace('_', ' ') + " : " + (levelReq - treeReq + " / " + levelReq)));
+                list.add(ChatColor.BOLD + "" + (treeReq == 0 ? ChatColor.GREEN + "" + ChatColor.STRIKETHROUGH : ChatColor.RED) + String.valueOf(cMaterial).replace('_', ' ').toUpperCase() + " : " + (levelReq - treeReq + " / " + levelReq));
             }
         return list;
     }

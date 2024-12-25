@@ -83,20 +83,17 @@ public class Main extends JavaPlugin implements Listener {
             TextUtils.sendConsoleMessage("Unable to load date");
         }
         defineTreeLevels();
-        for (World world : getServer().getWorlds()) {
-            TreeSerializer.loadTrees(this, world);
-        }
+        TreeSerializer.loadTrees(this, getServer().getWorld("world"));
 
         LocaleManager.loadLocale(locale);
         heads = config.getStringList("xmas.presents");
-        if (heads.size() == 0) {
+        if (heads.isEmpty()) {
             getLogger().warning(ChatColor.RED + "Warning! No heads loaded! Presents can't spawn without box!");
             return;
         }
         gifts = new ArrayList<>();
         for (String cItem : config.getStringList("xmas.gifts")) {
             try {
-
                 if (cItem.contains(":")) {
                     String[] split = cItem.split(":");
                     if (split.length == 0) throw new IllegalArgumentException();
