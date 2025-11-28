@@ -119,22 +119,20 @@ class Events implements Listener {
                     if (is != null)
                         if (Main.inProgress) {
                             if (XMas.getTreesPlayerOwn(player).size() < Main.MAX_TREE_COUNT) {
-                                if (is.getType() == XMas.XMAS_CRYSTAL.getType() && is.hasItemMeta() && is.getItemMeta().hasLore()) {
+                                if (is.getType() == Material.QUARTZ && is.hasItemMeta() && is.getItemMeta().hasLore()) {
                                     ItemMeta im = is.getItemMeta();
-                                    if (im.getLore().equals(XMas.XMAS_CRYSTAL.getItemMeta().getLore())) {
-                                        if (!block.getWorld().getName().equals("world")) {
-                                            event.getPlayer().sendMessage(ChatColor.RED + "The tree's magic won't work outside the overworld!");
-                                            return;
-                                        }
-                                        if (player.getGameMode() != GameMode.CREATIVE) {
-                                            if (is.getAmount() > 1) {
-                                                is.setAmount(is.getAmount() - 1);
-                                            } else {
-                                                event.getPlayer().getInventory().setItemInMainHand(new ItemStack(Material.AIR));
-                                            }
-                                        }
-                                        XMas.createMagicTree(player, block.getLocation());
+                                    if (!block.getWorld().getName().equals("world")) {
+                                        event.getPlayer().sendMessage(ChatColor.RED + "The tree's magic won't work outside the overworld!");
+                                        return;
                                     }
+                                    if (player.getGameMode() != GameMode.CREATIVE) {
+                                        if (is.getAmount() > 1) {
+                                            is.setAmount(is.getAmount() - 1);
+                                        } else {
+                                            event.getPlayer().getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+                                        }
+                                    }
+                                    XMas.createMagicTree(player, block.getLocation());
                                 }
                             } else {
                                 TextUtils.sendMessage(player, LocaleManager.TREE_LIMIT);

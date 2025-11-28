@@ -1,6 +1,12 @@
 package ru.meloncode.xmas;
 
 import com.google.common.collect.Lists;
+import com.sk89q.worldedit.extent.clipboard.Clipboard;
+import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormat;
+import com.sk89q.worldedit.extent.clipboard.io.ClipboardFormats;
+import com.sk89q.worldedit.extent.clipboard.io.ClipboardReader;
+import com.sk89q.worldedit.math.BlockVector3;
+import com.sk89q.worldedit.world.block.BlockState;
 import org.bukkit.*;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -17,6 +23,8 @@ import org.bukkit.util.Vector;
 import ru.meloncode.xmas.utils.TextUtils;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -197,35 +205,40 @@ public class Main extends JavaPlugin implements Listener {
             private static final long serialVersionUID = 1L;
 
             {
-                put(new Vector(0, -1, 0), Material.GRASS_BLOCK);
-                for (int i = 0; i <= 5; i++) {
-                    put(new Vector(0, i, 0), Material.SPRUCE_LOG);
-                    if (i >= 2) {
-                        put(new Vector(1, i, 0), Material.SPRUCE_LEAVES);
-                        put(new Vector(-1, i, 0), Material.SPRUCE_LEAVES);
-                        put(new Vector(0, i, 1), Material.SPRUCE_LEAVES);
-                        put(new Vector(0, i, -1), Material.SPRUCE_LEAVES);
+                Clipboard clipboard = null;
+                File bigTreeFile = new File("plugins/X-Mas/SmallChristmasTree.schem");
+                ClipboardFormat format = ClipboardFormats.findByFile(bigTreeFile);
+                try (ClipboardReader reader = format.getReader(new FileInputStream(bigTreeFile))) {
+                    clipboard = reader.read();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                BlockVector3 min = clipboard.getMinimumPoint();
+                BlockVector3 max = clipboard.getMaximumPoint();
+
+                for (int x = min.getBlockX(); x <= max.getBlockX(); x++) {
+                    for (int y = min.getBlockY(); y <= max.getBlockY(); y++) {
+                        for (int z = min.getBlockZ(); z <= max.getBlockZ(); z++) {
+
+                            BlockVector3 pos = BlockVector3.at(x, y, z);
+                            BlockState block = clipboard.getBlock(pos);
+
+                            // Skip air
+                            if (block.isAir()) {
+                                continue;
+                            }
+
+                            // Relative position = subtract origin
+                            BlockVector3 origin = clipboard.getOrigin();
+                            BlockVector3 relative = pos.subtract(origin);
+
+                            String materialName = block.getBlockType().getId().replace("minecraft:", "").toUpperCase();
+                            Material mat = Material.valueOf(materialName);
+                            put(new Vector(relative.x(), relative.y(), relative.z()), mat);
+                        }
                     }
                 }
-                put(new Vector(0, 6, 0), Material.SPRUCE_LEAVES);
-
-                put(new Vector(0, 7, 0), Material.GLOWSTONE);// Star
-
-                put(new Vector(1, 4, 0), Material.SPRUCE_LEAVES);
-                put(new Vector(1, 4, 1), Material.SPRUCE_LEAVES);
-                put(new Vector(1, 4, -1), Material.SPRUCE_LEAVES);
-                put(new Vector(-1, 4, -1), Material.SPRUCE_LEAVES);
-                put(new Vector(-1, 4, 1), Material.SPRUCE_LEAVES);
-
-                put(new Vector(1, 2, 1), Material.SPRUCE_LEAVES);
-                put(new Vector(-1, 2, -1), Material.SPRUCE_LEAVES);
-                put(new Vector(1, 2, -1), Material.SPRUCE_LEAVES);
-                put(new Vector(-1, 2, 1), Material.SPRUCE_LEAVES);
-
-                put(new Vector(2, 2, 0), Material.SPRUCE_LEAVES);
-                put(new Vector(0, 2, 2), Material.SPRUCE_LEAVES);
-                put(new Vector(-2, 2, 0), Material.SPRUCE_LEAVES);
-                put(new Vector(0, 2, -2), Material.SPRUCE_LEAVES);
+                clipboard.close();
             }
         }));
 
